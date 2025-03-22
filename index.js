@@ -1,6 +1,10 @@
 const cors = require("cors");
 const express = require("express");
 const dotenv = require("dotenv");
+const {
+  errorHandler,
+  notFoundHandler,
+} = require("./server/middlewares/commonHandler");
 
 // Import Routes
 const Auth = require("./server/api/auth");
@@ -21,6 +25,9 @@ app.use("/api", Auth);
 app.get("/api", (req, res) => {
   res.send("Hello!");
 });
+
+app.use(errorHandler);
+app.use(notFoundHandler);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
