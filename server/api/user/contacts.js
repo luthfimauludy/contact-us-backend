@@ -5,6 +5,24 @@ const contactModel = require("../../../models/contacts");
 const joi = require("joi");
 const { requireToken } = require("../../middlewares/jwt");
 
+const listMessages = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+
+    const contact = await contactModel.findByPk(id, {
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+
+    return res.json({
+      status: "OK",
+      message: `List of all message userId ${id}`,
+      data: contact,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const create = async (req, res, next) => {
   try {
     const bodyValidationSchema = joi.object({
@@ -26,7 +44,7 @@ const create = async (req, res, next) => {
 
     return res.status(201).json({
       status: "CREATED",
-      message: "Register Successfully",
+      message: "Create Contact Us Successfully",
       data: null,
     });
   } catch (error) {
@@ -35,5 +53,6 @@ const create = async (req, res, next) => {
 };
 
 router.post("/", requireToken, create);
+router.get("/", requireToken, listMessages);
 
 module.exports = router;
