@@ -4,6 +4,13 @@ const BadRequest = require("../utils/error");
 const userModel = require("../../models/users");
 const joi = require("joi");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+const jwtScretToken = process.env.JWT_SECRET_TOKEN;
+const jwtExpiresIn = process.env.JWT_EXPIRES_IN;
 
 const register = async (req, res, next) => {
   try {
@@ -74,7 +81,29 @@ const login = async (req, res, next) => {
       throw new BadRequest("Password incorrect");
     }
 
-    return res.json(user);
+    const tokenData = {
+      id: user.id,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      role: user.role,
+    };
+
+    const token = jwt.sign(tokenData, jwtScretToken, {
+      expiresIn: jwtExpiresIn,
+    });
+
+    return res.json({
+      status: "OK",
+      message: "Login Successfully",
+      data: {
+        user: {
+          id: user.id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+        },
+        token,
+      },
+    });
   } catch (error) {
     return next(error);
   }
