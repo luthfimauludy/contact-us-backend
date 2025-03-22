@@ -100,6 +100,7 @@ const login = async (req, res, next) => {
           id: user.id,
           firstname: user.firstname,
           lastname: user.lastname,
+          role: user.role,
         },
         token,
       },
