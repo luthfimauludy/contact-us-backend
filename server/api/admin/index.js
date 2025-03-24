@@ -66,7 +66,6 @@ const detailUser = async (req, res, next) => {
 
 const listMessages = async (req, res, next) => {
   try {
-    // validasi parameter
     const bodyValidationSchema = joi.object({
       userId: joi.string().required(),
     });
@@ -76,7 +75,6 @@ const listMessages = async (req, res, next) => {
       throw new BadRequest(error.details[0].message);
     }
 
-    // dapetin user dan validasi kalau usernya ada
     const { userId } = value;
 
     const user = await userModel.findByPk(userId, {
@@ -88,7 +86,6 @@ const listMessages = async (req, res, next) => {
       throw new BadRequest("User not found");
     }
 
-    // dapetin list message punya user
     const contact = await contactModel.findAll({
       where: {
         user_id: userId,
@@ -96,7 +93,6 @@ const listMessages = async (req, res, next) => {
       attributes: { exclude: ["createdAt", "updatedAt"] },
     });
 
-    // return data
     return res.json({
       status: "OK",
       message: "List messages",
@@ -109,9 +105,9 @@ const listMessages = async (req, res, next) => {
 
 const detailMessage = async (req, res, next) => {
   try {
-    // validasi parameter
     const bodyValidationSchema = joi.object({
       userId: joi.string().required(),
+      contactId: joi.string().required(),
     });
 
     const { error, value } = bodyValidationSchema.validate(req.params);
@@ -119,8 +115,54 @@ const detailMessage = async (req, res, next) => {
       throw new BadRequest(error.details[0].message);
     }
 
+    const { userId, contactId } = value;
+
+    const user = await userModel.findByPk(userId, {
+      where: {
+        user_id: userId,
+      },
+    });
+    if (!user) {
+      throw new BadRequest("User not found");
+    }
+
+    const contact = await contactModel.findByPk(contactId, {
+      where: {
+        contact_id: contactId,
+      },
+    });
+    if (!contact) {
+      throw new BadRequest("Contact not found");
+    }
+    if (!contact.message) {
+      throw new BadRequest("Message not found");
+    }
+
+    return res.json({
+      status: "OK",
+      message: "Detail message",
+      data: contact,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const editMessage = async (req, res, next) => {
+  try {
+    // validasi parameter
+    const bodyValidationSchema = joi.object({
+      message: joi.string().required(),
+    });
+
+    const { error, value } = bodyValidationSchema.validate(req.body);
+    if (error) {
+      throw new BadRequest(error.details[0].message);
+    }
+
     // dapetin user dan validasi kalau usernya ada
-    const { userId } = value;
+    const { userId, contactId } = req.params;
+    const { message } = value;
 
     const user = await userModel.findByPk(userId, {
       where: {
@@ -132,32 +174,26 @@ const detailMessage = async (req, res, next) => {
     }
 
     // dapetin message dan validasi kalau messagenya ada
-    const contact = await contactModel.findOne({
+    const contact = await contactModel.findByPk(contactId, {
       where: {
-        contact_id: contact.id,
+        contact_id: contactId,
       },
     });
-    if (!contact.message) {
-      throw new BadRequest("Message not found");
+    if (!contact) {
+      throw new BadRequest("Contact not found");
     }
 
-    // return data
-    return res.json({
-      status: "OK",
-      message: "Detail message",
+    await contact.update({ message });
+
+    return res.status(200).json({
+      status: "UPDATED",
+      message: "Message updated successfully",
       data: contact,
     });
   } catch (error) {
     return next(error);
   }
 };
-
-// const editMessage = async (req, res, next) => {
-//   try {
-//   } catch (error) {
-//     return next(error);
-//   }
-// };
 
 router.get("/users", requireToken, haveAdminRole, listUsers);
 router.get("/users/:userId", requireToken, haveAdminRole, detailUser);
@@ -173,11 +209,11 @@ router.get(
   haveAdminRole,
   detailMessage
 );
-// router.patch(
-//   "/users/:userId/contacts/:contactId",
-//   requireToken,
-//   haveAdminRole,
-//   editMessage
-// );
+router.patch(
+  "/users/:userId/contacts/:contactId",
+  requireToken,
+  haveAdminRole,
+  editMessage
+);
 
 module.exports = router;
