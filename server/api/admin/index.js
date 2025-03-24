@@ -8,6 +8,7 @@ const { requireToken, haveAdminRole } = require("../../middlewares/jwt");
 
 const listUsers = async (req, res, next) => {
   try {
+    // find all list user
     const users = await userModel.findAll({
       attributes: { exclude: ["password", "createdAt", "updatedAt"] },
     });
@@ -26,6 +27,7 @@ const listUsers = async (req, res, next) => {
 
 const detailUser = async (req, res, next) => {
   try {
+    // validation request params
     const bodyValidationSchema = joi.object({
       userId: joi.string().required(),
     });
@@ -37,6 +39,7 @@ const detailUser = async (req, res, next) => {
 
     const { userId } = value;
 
+    // validate user exists
     const user = await userModel.findByPk(userId, {
       where: {
         user_id: userId,
@@ -66,6 +69,7 @@ const detailUser = async (req, res, next) => {
 
 const listMessages = async (req, res, next) => {
   try {
+    // validation request params
     const bodyValidationSchema = joi.object({
       userId: joi.string().required(),
     });
@@ -77,6 +81,7 @@ const listMessages = async (req, res, next) => {
 
     const { userId } = value;
 
+    // validate user exists
     const user = await userModel.findByPk(userId, {
       where: {
         user_id: userId,
@@ -86,6 +91,7 @@ const listMessages = async (req, res, next) => {
       throw new BadRequest("User not found");
     }
 
+    // find contact model for all message
     const contact = await contactModel.findAll({
       where: {
         user_id: userId,
@@ -105,6 +111,7 @@ const listMessages = async (req, res, next) => {
 
 const detailMessage = async (req, res, next) => {
   try {
+    // validation request params
     const bodyValidationSchema = joi.object({
       userId: joi.string().required(),
       contactId: joi.string().required(),
@@ -117,6 +124,7 @@ const detailMessage = async (req, res, next) => {
 
     const { userId, contactId } = value;
 
+    // validate user exists
     const user = await userModel.findByPk(userId, {
       where: {
         user_id: userId,
@@ -126,6 +134,7 @@ const detailMessage = async (req, res, next) => {
       throw new BadRequest("User not found");
     }
 
+    // validate contact exists
     const contact = await contactModel.findByPk(contactId, {
       where: {
         contact_id: contactId,
@@ -133,9 +142,6 @@ const detailMessage = async (req, res, next) => {
     });
     if (!contact) {
       throw new BadRequest("Contact not found");
-    }
-    if (!contact.message) {
-      throw new BadRequest("Message not found");
     }
 
     return res.json({
@@ -150,7 +156,7 @@ const detailMessage = async (req, res, next) => {
 
 const editMessage = async (req, res, next) => {
   try {
-    // validasi parameter
+    // validation request body
     const bodyValidationSchema = joi.object({
       message: joi.string().required(),
     });
@@ -160,10 +166,10 @@ const editMessage = async (req, res, next) => {
       throw new BadRequest(error.details[0].message);
     }
 
-    // dapetin user dan validasi kalau usernya ada
     const { userId, contactId } = req.params;
     const { message } = value;
 
+    // validate user exists
     const user = await userModel.findByPk(userId, {
       where: {
         user_id: userId,
@@ -173,7 +179,7 @@ const editMessage = async (req, res, next) => {
       throw new BadRequest("User not found");
     }
 
-    // dapetin message dan validasi kalau messagenya ada
+    // validate contact exists
     const contact = await contactModel.findByPk(contactId, {
       where: {
         contact_id: contactId,
@@ -183,12 +189,50 @@ const editMessage = async (req, res, next) => {
       throw new BadRequest("Contact not found");
     }
 
+    // update message in the contact
     await contact.update({ message });
 
     return res.status(200).json({
       status: "UPDATED",
       message: "Message updated successfully",
       data: contact,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const deleteMessage = async (req, res, next) => {
+  try {
+    const { userId, contactId } = req.params;
+
+    // validate user exists
+    const user = await userModel.findByPk(userId, {
+      where: {
+        user_id: userId,
+      },
+    });
+    if (!user) {
+      throw new BadRequest("User not found");
+    }
+
+    // validate contact exists
+    const contact = await contactModel.findByPk(contactId, {
+      where: {
+        contact_id: contactId,
+      },
+    });
+    if (!contact) {
+      throw new BadRequest("Contact not found");
+    }
+
+    // delete the contact message
+    await contact.destroy();
+
+    return res.status(200).json({
+      status: "DELETED",
+      message: "Message deleted successfully",
+      data: null,
     });
   } catch (error) {
     return next(error);
@@ -214,6 +258,12 @@ router.patch(
   requireToken,
   haveAdminRole,
   editMessage
+);
+router.delete(
+  "/users/:userId/contacts/:contactId",
+  requireToken,
+  haveAdminRole,
+  deleteMessage
 );
 
 module.exports = router;
